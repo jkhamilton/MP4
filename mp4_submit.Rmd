@@ -1,0 +1,168 @@
+---
+title: "Mini-Project 4: Maple Sap"
+author: "Julia Hamilton, Zoe Rubinstein, Jessica Tin"
+date: "May 1, 2017"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+
+##Prompt 5: Predict the start date, end date, and yield for sugaring season
+
+###Set Up:
+```{r}
+# Load data
+library(rgdal)
+library(tidyverse)
+library(reshape2)
+library(leaflet)
+library(ggthemes)
+
+# load maple data
+load("/Users/Jessica/Downloads/maple_sap.rda")
+maple_sap <- maple_sap %>%
+  select(when, sap) %>%
+  filter(!is.na(sap))
+
+# load weather data
+library(macleish)
+mac <- etl("macleish") %>%
+  etl_update()
+
+whately <- mac %>%
+  tbl("whately") %>%
+  collect(n = Inf) %>%
+  select(when, temperature)
+
+orchard <- mac %>%
+  tbl("orchard") %>%
+  collect(n = Inf) %>%
+  select(when, temperature)
+```
+
+
+###Data Wrangling
+```{r}
+# Join weather data
+weather <- inner_join(whately, orchard, by="when") %>%
+  separate(col = when, into = c("when", "time"), sep = "T", remove = TRUE) %>%
+  rename(whately=temperature.x, orchard = temperature.y)
+
+# Average temperature from two locations
+weather <- weather %>%
+  mutate(temp = (orchard+whately)/2) %>%
+  select(when, time, temp)
+
+# Select assortment of times to represent different times of day
+weather_day <- weather %>%
+  filter(time== "06:00:00Z" | time=="9:00:00Z" | time== "12:00:00Z" | time== "15:00:00Z" | time=="18:00:00Z") %>%
+  group_by(when) %>%
+  summarize(avg_day_temp = mean(temp))
+
+weather_night <- weather %>%
+  filter(time=="21:00:00Z"| time=="00:00:00Z" | time== "03:00:00Z" | time== "06:00:00Z") %>%
+  group_by(when) %>%
+  summarize(avg_night_temp = mean(temp))
+
+weather_all <- inner_join(weather_day, weather_night, by="when")
+
+
+# Combine temperature into 1 column and Indicate if day/night
+weather_all<-mutate(weather_all, when=as.Date(when))
+
+melted_day<-select(weather_all, avg_day_temp, when)
+melted_day<-melt(melted_day, id.vars=c("when"), variable.name="ToD", value.name="temperature")
+
+melted_night<-select(weather_all, avg_night_temp, when)
+melted_night<-melt(melted_night, id.vars=c("when"), variable.name="ToD", value.name="temperature")
+
+full<-rbind(melted_day, melted_night)
+full<-arrange(full, when)
+
+
+##Add Sap Data
+full2<- inner_join(full, maple_sap)
+
+##Filter by Year
+full3<-full2 %>%
+  separate(col = when, into = c("year", "month", "day"), sep = "-", remove = TRUE) %>%
+  mutate(month_day = paste(month, day, sep = '-')) %>%
+  select(year, month_day, ToD, temperature, sap)
+
+yr2015<-filter(full3, year=="2015")
+yr2016<-filter(full3, year=="2016")
+yr2017<-filter(full3, year=="2017")
+```
+
+
+###Visualization: Leaflet Plot
+```{r}
+bechtel <- data.frame(lat = 42.449167, lon = -72.679389)
+
+forest_pal <- colorFactor("Greens", macleish_layers[["forests"]]$Sheet1__Na == 9)
+
+leaflet() %>%
+  ## Base groups
+  addTiles(group = "OpenStreetMap") %>%
+  addProviderTiles("Esri.WorldTopoMap", group = "Topography") %>%
+  addProviderTiles("Esri.WorldImagery", group = "Satellite") %>%
+  addProviderTiles("Stamen.TonerLite", group = "Toner Lite") %>%
+  
+  ## Boundaries of Property
+  addPolygons(data = macleish_layers[["boundary"]], weight = 1, fillOpacity = 0.01, group = "Boundaries") %>%
+  
+  ## Natural elements, filtering for Sugar Maple Forest
+  addPolygons(data = macleish_layers[["forests"]], 
+              color = ~forest_pal(Sheet1__Na == 9), weight = 0.1, 
+              fillOpacity = 0.2,
+              popup = ~ Sheet1__Na == 9, group = "Natural") %>%
+  
+  ## Layers control
+  addLayersControl(baseGroups = c("OpenStreetMap", "Topography", "Satellite", "Toner Lite"),
+    overlayGroups = c("Boundaries", "Natural"),
+    options = layersControlOptions(collapsed = FALSE)) %>%
+  setView(lat = bechtel$lat, lng = bechtel$lon, zoom = 15)
+
+
+##Including data frame that we pulled data from ("forests" within MacLeish spatial data)
+summary(macleish_layers[["forests"]])
+```
+
+
+###Visualization: Temperature Graphic
+```{r}
+# plot full data
+temp_plot <- ggplot(data = full) +
+  geom_point(aes(x = when, y = temperature, color = ToD), alpha = 0.5) +
+  geom_line(aes(x = when, y = 0))
+
+temp_plot
+
+
+## plot Februrary to April
+feb_apr <-full %>%
+  filter(grepl("(2016-(02|03|04))",when))
+
+feb_apr_plot <-ggplot(data = feb_apr) +
+  geom_point(aes(x = when, y = temperature, color = ToD), alpha = 0.5) +
+  geom_line(aes(x = when, y = 0))
+
+feb_apr_plot
+```
+
+
+###Visualization: Sap Collection Graphic
+```{r}
+ggplot(data=full3, aes(x=month_day, y=sap)) + 
+  geom_point() + 
+  facet_wrap(facets="year") + 
+  theme_stata() +
+  theme(axis.text.x = element_text(angle=90))
+```
+
+
+
