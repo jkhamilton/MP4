@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 ```
 
 
-##Prompt 5: Predict the start date, end date, and yield for sugaring season
+####Prompt 5: Predict the start date, end date, and yield for sugaring season
 
 ###Set Up:
 ```{r}
@@ -143,15 +143,34 @@ temp_plot <- ggplot(data = full) +
 temp_plot
 
 
-## plot Februrary to April
-feb_apr <-full %>%
-  filter(grepl("(2016-(02|03|04))",when))
+## plot Februrary to April 2015 and 2017
+feb_apr15 <-full %>%
+  filter(grepl("(2015-(02|03|04))",when))
 
-feb_apr_plot <-ggplot(data = feb_apr) +
+feb_apr15_plot <-ggplot(data = feb_apr15) +
   geom_point(aes(x = when, y = temperature, color = ToD), alpha = 0.5) +
   geom_line(aes(x = when, y = 0))
 
-feb_apr_plot
+feb_apr15_plot
+
+feb_apr16 <-full %>%
+  filter(grepl("(2016-(02|03|04))",when))
+
+feb_apr16_plot <-ggplot(data = feb_apr16) +
+  geom_point(aes(x = when, y = temperature, color = ToD), alpha = 0.5) +
+  geom_line(aes(x = when, y = 0))
+
+feb_apr16_plot
+
+feb_apr17 <-full %>%
+  filter(grepl("(2017-(02|03|04))",when))
+
+feb_apr17_plot <-ggplot(data = feb_apr17) +
+  geom_point(aes(x = when, y = temperature, color = ToD), alpha = 0.5) +
+  geom_line(aes(x = when, y = 0))
+
+feb_apr17_plot
+
 ```
 
 
@@ -163,6 +182,12 @@ ggplot(data=full3, aes(x=month_day, y=sap)) +
   theme_stata() +
   theme(axis.text.x = element_text(angle=90))
 ```
+
+####Write Up:
+This project asked us to use the data gathered from the orchard and whately temperature towers as well as the data on gallons of sap collected over the last couple of years from the Macleish Field Station maple trees to predict the start date, end date, and yild for sugaring season. Initially, we hoped to use our new knowledge of spatial data wrangling and visualization to solve this problem, but we discovered that this approach would not sufficiently or accurately display our findings. Instead, we decided to use scatterplot graphs to visualize the data in a way that clearly illustrates when the conditions are ideal for sap collection and the patterns of sap collection in recent years. 
+Our first graphic is a leaflet plot that depicts where in the the Macleish Field Station the Sugar Maple Forest is located. While this does not directly answer the question posed, it orients our audience to where the data we are using is coming from. This type of visualization is beneficial in introducing new people to this discussion, such as if we were to bring this problem to engineering or environmental studies students for further advice on where to go next. 
+Our second two graphics illustrate the bulk of our findings. We chose to focus our analysis on the temperature data to the months of February through the end of April because according to Reid Bertone-Johnson these are the months previously identified as ideal for maple tapping. Our Temperature plots show some inconsistency in the exact date that average night temperature is below freezing and the average day temperature is above freezing for the first time, but in all three years it always occurs in the month of February. This finding is consistent to what is seen in our 2017 Sap Collection Plot. Our 2015 and 2017 plots for sap collection suggest that the maximum amount of sap collection occurs in either February or March. Unfortunately, due to the shifting date of the first freezing night/above freezing day across the three years of data we have and the inconsistent start dates of sap collection in 2015 and 2017, it is challenging to offer a precise start date or end date for sap collection. At this point, it merely seems that our findings were consistent with what Reid suggested, which is that maple tapping should begin in February and end in late March/early April. Likewise, having only two years worth of sap collection data seems insufficient to reasonably conclude how much sap yield Macleish should anticipate. The good news is that over the next few years more data can be collected which could be used to generate more plots and hopefully reveal patterns that could help us answer these questions. 
+Moving forward, we think that a few things could be improved upon to help better tackle these questions. 
 
 
 
